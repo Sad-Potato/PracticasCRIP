@@ -1,0 +1,97 @@
+#+TITLE: Clase1
+
+
+
+* Aritmética modular
+** Basics
+Z es el conjunto de los números enteros
+N son los enteros no negativos
+para a,b € Z; a|b si b = c*a, con c€Z
+** Máximo común divisor
+para a,b€Z; decimos que d es un máximo común divisor de a y b si:
+    d|a, d|b
+    Si c|a y c|b, entonces c|d
+d existe y en Z es único salvo signo
+mcd(a,b) = mcd(b,a)
+mcd(a,a) = a
+mcd(a,b) >= 0
+mcd(a,b) = mcd(b, a-zb), z€Z
+mcd(a,b) = mcd(b, a-b)
+mcd(a,b) = mcd(b, a mod b)
+** División
+para a,b€Z existen q,r tales que a=qb+r; y si impones 0 <= r < b,
+entonces son únicos.
+a mod b = r (resto)
+a div b = q (cociente)
+** Identidad de Bézout
+existen u,v € Z tales que mcd(a,b) = ua + vb,
+u,v son los coeficientes de Bézout de a,b
+ax + by = c, con a,b,c€Z tiene solución para x,y si y sólo si mcd(a,b)|c
+mcd(a,b) = ua+vb = (u-zb)a + (v+za)b, z€Z
+** Congruencia
+a #= b mod n si n|(b-a) (#= es el signo de equivalencia)
+dado a€Z, a #= (a mod n) mod n
+la congruencia es una relación de equivalencia en Z (reflexiva, simétrica y transitiva)
+la congruencia es compatible con la suma y el producto: (a #= b mod n) -> (ac #= bc mod n) ^ (a+c #= b+c mod n)
+** Conjunto cociente de la congruencia
+Conjunto cociente de congruencia: Z/(#=.n) = {[0],[1],[2],[3],...,[n-1]}
+Para no confundir y mostrar que [x] es una clase de Z/(#=.n), se puede escribir [x].n
+Z/(#=.n) también se escribe como Z.n
+(Z.n, +, *) es un anillo, con a+b = (a+b) mod n ,ý ab = (ab) mod n
+a⁻¹ es aquella clase que verifica a*a⁻¹ = a⁻¹*a = 1
+Para que todas las clases de Z.n tengan inverso, n debe ser primo.
+(Z.p, +, *) con p primo es un cuerpo.
+p primo si cumplen: (p|ab) -> (p|a) v (p|b)
+Los cuerpos molan porque se puede aplicar álgebra lineal sobre ellos.
+** Unidades de Z.n
+U(Z.n) = {a€Z.n | existe a⁻¹} = {a€Z.n | existe b€Z.n : ab = 1}
+(ab = 1 en Z.n) -> (n | (ab-1)) -> (ab - kn = 1 en Z) -> (mcd(a,n) = 1)
+Si mcd(a,n) = 1, por Bézout, existen u,v€Z tal que au + nv = 1. Con esto se encuentran los inversos.
+función cociente de Euler: \phi(n) = |U(Z.n)|
+\phi(n) es igual al número de primos relativos de n menores que n
+** Z.p : cuando Z.n es cuerpo
+x²-1 = 0 sólo tiene dos soluciones en Z.p: x=1 y x=-1
+Si x²-1 = 0 tiene más de dos soluciones en Z.n, entonces n no es primo
+De hecho, si x=m es solución de dicha fórmula, y m != 1,-1; entonces m es un divisor propio de n ( m|n )
+Tma de Fermat: en Z.p, a = a^(p); y si a != 0, 1 = a^(p-1).
+Tma pequeño de Fermat: p es primo -> para todo a€Z, a^(p-1) #= 1 mod p
+** Algoritmo de Miller-Rabin
+Entrada: n
+Salida: n es primo? -> (no con seguridad absoluta) v (sí con seguridad de 0.75)
+
+Si n es par, y n!=2 -> fin
+Si n es impar, (n-1)=2^(u)*s
+    Si n fuese primo, 2^(n-1) #= 1 mod n, entonces
+    a^(n-1) = a^(2^(u)*s) = ( a^(2^(u-1)*s) )² = 1
+    ( a^(2^(u-1)*s) )² = 1 => ( a^(2^(u-1)*s) = -1 ) v ( a^(2^(u-1)*s) = 1 )
+    ( a^(2^(u-1)*s) = 1 ) => ( a^(2^(u-2)*s) = -1 ) v ( a^(2^(u-2)*s) = 1 )
+    ( a^(2^(u-2)*s) = 1 ) => ( a^(2^(u-3)*s) = -1 ) v ( a^(2^(u-3)*s) = 1 )
+    ...
+    (a es un número aleatorio entre 2 y n-2, a se le llama semilla)
+    Por lo tanto calculamos la secuencia L = < a^(s), a^(2s), a^(2²s), ..., a^(2^(n-1)*s) > y se observan:
+        (k está entre 0 y u-1) (-1 se refiera a n-1, -1 en Z.n)
+        Si 1 !€ L, n NO es primo (seguro)
+        Si x = a^(2^(k)*s) != +-1 y x² = a^(2^(k+1)*s) = 1 para algun k, n NO es primo (seguro)
+        Si x = a^(2^(k)*s) = -1 para algun k, n es probablemente primo.
+        Si a^(s) = 1, n probablemente primo
+
+Por cada semilla que diga que n es primo, el error se reduce por 1/4.
+10 semillas dicen que n es primo -> n es primo con un error de 1/(4¹⁰)
+
+** Logaritmo discreto
+a,b € Z.p
+a^(k) = b, ¿como encuentro k?
+Si b = 1, entonces k = p-1.
+Después, 0 <= k <= p-1
+Si k existe, se puede escribir de esta forma: k = c*u - v, con c = floor( sqrt(p-1) )
+( floor(4.7) = 4 )
+k = c*u - v tiene forma de división, v€{0,...,c-1}, u€{1,...,c}
+por lo tanto:
+a^(k) = a^(cu-v) = b => a^(cu)*a^(-v) = b => a^(cu) = b*a^(v)
+
+Se utiliza la última igualación.
+Se calculan dos listas:
+Paso enano = {ba⁰, ba, ba²,..., ba^(c-1)}
+Paso gigante = {a^(c), a^(2c), a^(3c),..., a^(c*c)}
+Si intersección(Paso enano, Paso gigante) = {}, k no existe
+Si intersección(Paso enano, Paso gigante) = {algo}, k es calculable
