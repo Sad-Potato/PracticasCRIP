@@ -105,22 +105,19 @@ def listaL_apuntes(a,u,s,p):
     # Partimos de a^s
     a_s=modPotencia(a,s,p)
     if a_s==1 or a_s==p-1:
-        print("### 1 ###")
         return True
-    for k in np.arange(u-1):
+
+    # Usamos u-1 ya que ya hemos comprobado 
+    # para u=0
+    for k in np.arange(u-1): 
         a_s=modPotencia(a_s,2,p)
-        if a_s==p-1 and k<u:
-            print("### 2 ###")
+        if a_s==p-1:
             return True
         if a_s!=1 and a_s!=p-1 and modPotencia(a_s,2,p)==1:
-            print("### 3 ###")
             return False
         if a_s==1:
-            print("### 4 ###")
             return False
-    print("### 5 ###")
     return False
-
 
 
 
@@ -214,7 +211,8 @@ def main():
         if tecla=='3':
             print(modPotencia(2,13,5))
         if tecla=='4':
-            print(esPrimo(561,10))
+            for p in primos:
+                print(esPrimo(1569,10))
 
 
         tecla=input("\nCualquier tecla para volver al menu, \"e\" para salir\n")
