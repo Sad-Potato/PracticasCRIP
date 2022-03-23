@@ -5,8 +5,7 @@
 """
 import numpy as np
 import os
-
-from sqlalchemy import false
+import random
 
 ######### Ejercicio 1 #########
 
@@ -53,8 +52,8 @@ def modPotencia(a,b,n):
         r=b%2
         if r==1:
             p=p*a%n
-        a=pow(a,2)%n
-        b=(b-r)/2
+        a=(a*a)%n
+        b=(b-r)//2
     return p
 
 ######### Ejercicio 4 #########
@@ -66,37 +65,15 @@ def modPotencia(a,b,n):
 
 def descomposicionUyS(n):
     u=0
-    while(n%2==0):
-        n/=2
+    while(modPotencia(n,1,2)==0):
+        n=n//2
         u+=1
-    return u,int(n)
+    return u,n
 
 # Funciónes para hacer las comprobaciones pertinentes a 
 # cada numero aleatorio que escogemos de Zₚ y sus potencias 
 # de 2ᵘ*s, esta función se llama k veces desde "esPrimo" con 
 # k dependiendo del grado de confianza que necesitemos
-
-# Función de los apuntes de clase, aqui 
-# la probabilidad esta en que sea primo
-
-def listaL_wiki(a,u,s,p):
-    # Para cada a_i comprobamos unas condiciones
-    # para sus potencias
-
-    aPot=modPotencia(a,s,p)
-    """ print(aPot) """
-    if aPot==1 or aPot==p-1:
-        return True
-
-    for k in np.arange(u-1):
-        aPot=modPotencia(aPot,2,p)
-        """ print(u,aPot) """
-        if aPot==p-1:
-            return True
-    return False
-
-
-
 
 def listaL_apuntes(a,u,s,p):
     # Para cada a_i comprobamos unas condiciones
@@ -109,37 +86,14 @@ def listaL_apuntes(a,u,s,p):
 
     # Usamos u-1 ya que ya hemos comprobado 
     # para u=0
-    for k in np.arange(u-1): 
+    for k in np.arange(u-1):
         a_s=modPotencia(a_s,2,p)
         if a_s==p-1:
             return True
-        if a_s!=1 and a_s!=p-1 and modPotencia(a_s,2,p)==1:
-            return False
         if a_s==1:
             return False
     return False
 
-
-
-# Función de "Lecture Notes on Cryptography", la
-# probabilidad esta en que no sea primo
-
-# ESTA MAL?¿?¿?
-
-def listaL_lnc(a,u,s,p):
-    # Para cada a_i comprobamos unas condiciones
-    # para sus potencias
-
-    if modPotencia(a,p-1,p)!=1:
-        return False
-    for k in np.arange(u)+1:
-        # Calculamos a^2^(k)*s mod p con 
-        # 0<=k<=u
-        aModP=modPotencia(a,pow(2,k)*s,p)
-        k_1=modPotencia(a,pow(2,k-1)*s,p)
-        if aModP==1 and k_1!=1 and k_1!=-1:
-            return False
-    return True
 
 # Función para determinar si dado un número p es (probablemente)
 # primo usando el método Miller-Rabin, si devolvemos que no es primo
@@ -148,7 +102,7 @@ def listaL_lnc(a,u,s,p):
 
 def esPrimo(p, k):
 
-    # Primer caso, si p es par y ≠ a 2
+    # Primer caso, si p es par y p ≠ 2
     if p!=2 and p%2==0:
         return False
 
@@ -159,7 +113,7 @@ def esPrimo(p, k):
 
     for i in np.arange(k):
         # Escogemos el número aleatorio
-        a_i=np.random.randint(2,p-1)
+        a_i=random.randint(2,p-1)
 
         # Llamamos a la función que se 
         # encarga de hacer las comprobaciones
@@ -167,11 +121,11 @@ def esPrimo(p, k):
         # Si para alguno de los números aleatorios
         # devuelve que no es primo paramos y terminamos
         # ya que tenemos la seguridad de que no lo es
-        """ print("*****") """
         if not listaL_apuntes(a_i,u,s,p):
             return False
 
-    # Devolvemos si es o no primo
+    # Si aguantan las condiciones devolvemos
+    # que es primo
     return True
 
 
@@ -188,17 +142,18 @@ def esPrimo(p, k):
 def main():
     clear = lambda: os.system('clear')
     tecla=""
-    np.random.seed(42)
+    random.seed(42)
 
     # Lista de primos de gran tamaño para hacer 
     # pruebas
     primos=[46381, 768479, 9476407, 36780481, 562390847, 1894083629,
-    65398261921, 364879542899, 8590365927553, 28564333765949, 123456789101119]
+    65398261921, 364879542899, 8590365927553, 28564333765949, 123456789101119,
+    623084000430982607975364879776457600049]
 
     while(tecla!="e"):
         print("Elija un ejercicio (1-8)")
         tecla=input()
-        clear() # Limpiamos la terminal
+        #clear() # Limpiamos la terminal
 
         a,b=28,13
 
@@ -209,11 +164,20 @@ def main():
         if tecla=='2':
             print(modInverso(a,b))
         if tecla=='3':
-            print(modPotencia(2,13,5))
+            # Probamos nuestra función con números muy grandes
+            print(modPotencia(252336560693540533935881068298825202079
+                ,38942750026936412998460304986028600003,623084000430982607975364879776457600049))
         if tecla=='4':
+            # Probamos miller rabin para primos muy grandes
+            print("Lista de números primos:")
             for p in primos:
-                print(esPrimo(1569,10))
-
+                res=": no es primo"
+                if esPrimo(p,10):
+                    res=": es primo"
+                print("\t",p,res)
+        
+        if tecla=='5':
+            print("work in progress")
 
         tecla=input("\nCualquier tecla para volver al menu, \"e\" para salir\n")
 
