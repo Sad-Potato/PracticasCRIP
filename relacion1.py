@@ -15,36 +15,24 @@ import time, collections
 # Para comprobaciones
 from sympy import legendre_symbol
 
-#################################################################################
-# PARAMETROS PARA LOS EJERCICIOS
-#################################################################################
-
-a,b=28,13
-c,d=252336560693540533935881068298825202079,38942750026936412998460304986028600003
-e,f,g=13,2,19
-# Lista de primos de gran tamaño para hacer 
-# pruebas
-primos=[46381, 768479, 9476407, 36780481, 562390847, 1894083629,
-65398261921, 364879542899, 8590365927553, 28564333765949, 123456789101119,
-623084000430982607975364879776457600049]
-
 ######### Ejercicio 1 #########
 
 def mcd_r(m):
-    if m[0,0]%m[1,0]!=0:
-        c=m[0,1:]-(m[0,0]//m[1,0])*m[1,1:]
-        m[0,1:]=m[1,1:]
-        m[1,1:]=c
-        aux=m[1,0]
-        m[1,0]=m[0,0]%m[1,0]
-        m[0,0]=aux
+    if m[0][0]%m[1][0]!=0:
+        aux=(m[0][0]//m[1][0])
+        c=[m[0][1]-m[1][1]*aux,m[0][2]-m[1][2]*aux]
+        m[0][1:]=m[1][1:]
+        m[1][1:]=c
+        aux=m[1][0]
+        m[1][0]=m[0][0]%m[1][0]
+        m[0][0]=aux
         m=mcd_r(m)
     return m
 
 def mcd(a,b):
-    m=np.array([[a,1,0],[b,0,1]])
+    m=[[a,1,0],[b,0,1]]
     m=mcd_r(m)
-    return m[1,:]
+    return m[1][:]
 
 
 ######### Ejercicio 2 #########
@@ -417,6 +405,7 @@ def raicesNCompuesto(a,p,q):
     # tales que c*p+d*q=1 es decir los coeficientes de bezout de p y q
     m=mcd(p,q)
     c,d=m[1:]
+    c,d=int(c),int(d)
 
     # Ahora con los coeficientes de Bezout calculamos las raices 
     # de n a partir de las de p y q usando el teorema chino de 
@@ -442,17 +431,21 @@ def factorizacionFermat(n):
     # Obtenemos la raiz cuadrada de n y obtenemos el entero
     # inmediatamente superior, mientras x^2-n no sea un 
     # cuadrado perfecto incrementamos x en una unidad
-    
+
     x=math.ceil(newtonRaphson(n,0.000001))
-    while pow(round(newtonRaphson((pow(x,2)-n),0.00001)),2)!=(pow(x,2)-n):
+    x2n=pow(x,2)-n
+
+    # pow(round(newtonRaphson((pow(x,2)-n),0.00001)),2)!=(pow(x,2)-n):
+    while pow(math.floor(newtonRaphson(x2n,0.0001)+0.5),2)!=x2n:
         # Compruebo que sea un cuadrado perfecto calculando la aproximacion
         # de la raiz cuadrada y en el caso de que el cuadrado de esta apro-
         # mación sea igual pues concluyo que lo es
         x+=1
+        x2n=pow(x,2)-n
     
     # Una vez que tenemos un x tal que x^2-n es un cuadrado perfecto
     # le asignamos a y el valor de la raiz cuadrada de x^2-n
-    y=round(newtonRaphson((pow(x,2)-n),0.00001))
+    y=int(newtonRaphson((pow(x,2)-n),0.00001)+0.5)
 
     # Devolvemos los factores encontrados
     return [x+y,x-y]
@@ -468,25 +461,29 @@ def factorizacionPollard(n):
     a,b,d=2,2,1
     # Mientras d valga 1
     while d==1:
+        
         # Le aplicamos a "a" la funcion g(x)=(x^2+1) mod n 1 vez
         # y a b dos veces 
-        a=modPotencia(pow(a,2)+1,1,n)
-        b=modPotencia(pow(modPotencia(pow(b,2)+1,1,n),2)+1,1,n)
+        a=modPotencia(modPotencia(a,2,n)+1,1,n)
+        b=modPotencia(modPotencia(b,2,n)+1,1,n)
+        b=modPotencia(modPotencia(b,2,n)+1,1,n)
 
         # Calculamos el MCD para a-b y n y se
         # lo asignamos a d
-        d=mcd(a-b,n)[0]
+        d=mcd(modPotencia(a-b,1,n),n)[0]
     
-    if 1<d<n:
-        return d
-    if d==n:
-        return "Fracaso al encontrar un factor no trivial"
+        if 1<d<n:
+            return d
+        if d==n:
+            return "Fracaso al encontrar un factor no trivial"
     
+
+
 ######### Ejercicio 8 #########
 
 # Benchmark de tiempos acordada entre
 # compañeros de la asignatura
-def tiempos():
+def tiempos(primos):
     tiempos = collections.defaultdict(int)
     EJECUCIONES = 1000
     
@@ -518,15 +515,44 @@ def tiempos():
         tiempos['Tonelli-Shanks'] += time.time() - t
         
         n = primos[0] * primos[1]
-
+        aux = modPotencia(57, 2, n)
+        t = time.time()
+        raicesNCompuesto(aux, primos[0], primos[1])
+        tiempos['CRT'] += time.time() - t
+        
+        t = time.time()
+        factorizacionPollard(n)
+        tiempos['Pollard'] += time.time() - t
  
     for i in tiempos: tiempos[i] /= EJECUCIONES
  
     # Fermat va mucho más lento, así que lo hago con menos ejecuciones
+    for _ in range(25):
+        t = time.time()
+        factorizacionFermat(n)
+        tiempos['Fermat'] += time.time() - t
+    tiempos['Fermat'] /= 25
 
- 
+
     for i in tiempos:
-        print(i+':', tiempos[i])
+        print(i+':', tiempos[i]*1000000)
+
+"""
+    Los tiempos que he obtenido son los siguientes, en microsegundos: 
+
+                Tiempos personales          | Comparativa de un compañero
+    Ejercicio 1     8.23µs                      7.316µs
+    Ejercicio 2     8.32µs                      7.515µs
+    Ejercicio 3     2.77µs                      7.832µs
+    Ejercicio 4     33.49µs                     93.57µs
+    Ejercicio 5     67.89µs                     543µs
+    Ejercicio 6.1   15.68µs                     171µs
+    Ejercicio 6.2   61.96µs                     317µs
+    Ejercicio 7.1   558027µs(0.558 seg)         1225000µs             
+    Ejercicio 7.2   2533.74µs(2.533 ms)         1937µs                                  
+
+
+"""
 
 
 ###########################################################
@@ -538,6 +564,19 @@ def main():
     tecla=""
     random.seed(42)
 
+    #################################################################################
+    # PARAMETROS PARA LOS EJERCICIOS
+    #################################################################################
+
+    a,b=28,13
+    c,d=252336560693540533935881068298825202079,38942750026936412998460304986028600003
+    e,f,g=13,2,19
+    # Lista de primos de gran tamaño para hacer 
+    # pruebas
+    primos=[46381, 768479, 9476407, 36780481, 562390847, 1894083629,
+    65398261921, 364879542899, 8590365927553, 28564333765949, 123456789101119,
+    623084000430982607975364879776457600049]
+
     while(tecla!="e"):
         print("Elija un ejercicio (1-8)")
         tecla=input()
@@ -547,12 +586,14 @@ def main():
 
         if tecla=='1':
             m=mcd(a,b)
-            print("MCD positivo de",a,"y "+str(b)+"="+str(m[0])+" ;u:",m[1],"v:",m[2])
+            print("El MCD positivo de",a,"y "+str(b)+" = "+str(m[0])+" ;u:",m[1],"v:",m[2])
         if tecla=='2':
-            print(modInverso(a,b))
+            print("El inverso de",a,"es",modInverso(a,b))
+            """ print(modPotencia(7*28,1,b)) """
         if tecla=='3':
-            # Probamos nuestra función con números muy grandes
-            print(modPotencia(c,d,primos[-1]))
+            # Probamos nuestra función con números muy grandes, comprobado en gap
+            print("El número",c,"elevado a",d,"módulo",primos[-2],"es igual a:")
+            print(modPotencia(c,d,primos[-2]))
         if tecla=='4':
             # Probamos miller rabin para primos muy grandes
             print("Lista de números primos:")
@@ -579,14 +620,14 @@ def main():
             a,p,q=4,7,11
             n=p*q
             raices=raicesNCompuesto(a,q,p)
-            print("Las raices de",n,"siendo n",p,"por",q,"son",raices)
+            print("\nLas raices de",n,"siendo n",p,"por",q,"son",raices)
 
             # Comprobacion de que para las 4 raices si se elevan al cuadrado
             # y se les resta a módulo n el resultado es 0
-            print(modPotencia(modPotencia(raices[0],2,n)-a,1,n),
+            """ print(modPotencia(modPotencia(raices[0],2,n)-a,1,n),
                 modPotencia(modPotencia(raices[1],2,n)-a,1,n),
                 modPotencia(modPotencia(raices[2],2,n)-a,1,n),
-                modPotencia(modPotencia(raices[3],2,n)-a,1,n))
+                modPotencia(modPotencia(raices[3],2,n)-a,1,n)) """
 
         if tecla=='7':
             n=6352351
@@ -598,7 +639,8 @@ def main():
             print("Un factor no trivial obtenido de la factorización por Pollard de",n,"es",fact2)
 
         if tecla=='8':
-            tiempos()
+            tiempos(primos)
+
 
         #################################################################################
 
