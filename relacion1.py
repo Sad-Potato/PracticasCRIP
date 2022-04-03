@@ -2,15 +2,31 @@
     CRIPTOGRAFIA Y COMPUTACIÓN
     Relación 1: Aritmética modular
 
+    @author: Sergio Fernández Vela
+
 """
 
-from operator import mod
 import numpy as np
 import os
 import random
 import math
+import time, collections
 
+# Para comprobaciones
 from sympy import legendre_symbol
+
+#################################################################################
+# PARAMETROS PARA LOS EJERCICIOS
+#################################################################################
+
+a,b=28,13
+c,d=252336560693540533935881068298825202079,38942750026936412998460304986028600003
+e,f,g=13,2,19
+# Lista de primos de gran tamaño para hacer 
+# pruebas
+primos=[46381, 768479, 9476407, 36780481, 562390847, 1894083629,
+65398261921, 364879542899, 8590365927553, 28564333765949, 123456789101119,
+623084000430982607975364879776457600049]
 
 ######### Ejercicio 1 #########
 
@@ -85,17 +101,19 @@ def listaL_apuntes(a,u,s,p):
     # para sus potencias
 
     # Partimos de a^s
-    a_s=modPotencia(a,s,p)
-    if a_s==1 or a_s==p-1:
+    aS=modPotencia(a,s,p)
+    if aS==1 or aS==p-1:
         return True
 
     # Usamos u-1 ya que ya hemos comprobado 
     # para u=0
     for k in np.arange(u-1):
-        a_s=modPotencia(a_s,2,p)
-        if a_s==p-1:
+        aS=modPotencia(aS,2,p)
+        # Si hay algun "a" que valga -1 devolvemos primo
+        if aS==p-1:
             return True
-        if a_s==1:
+        # Si hay algun "a" que valga 1 devolvemos que no es primo
+        if aS==1:
             return False
     return False
 
@@ -226,7 +244,9 @@ def pasoEnanoGigante(a,c,p):
         return logaritmo
     
     return "no existe el logaritmo"
-        
+
+
+
 ######### Ejercicio 6 #########
 """
     Escribe una función que, dado un entero a y un primo p 
@@ -241,8 +261,10 @@ def pasoEnanoGigante(a,c,p):
 
 def simboloJacobiLegendre(a,n):
     # Comprobamos que se cumplan las condiciones
-    # iniciales
-    """ assert n>=3 and a>=0 and a<n """
+    # iniciales establecidas, aunque se puede 
+    # calcular de igual manera aunque no se cumplan
+    # estan condiciones
+    assert n>=3 and a>=0 and a<n
 
     if a==0:
         return 0
@@ -304,66 +326,107 @@ def squaringTrapdoorRabin(a, p):
     # para a y para p tiene que ser 1
 
     if simboloJacobiLegendre(a,p)!=1:
-        return "No existe un r para el a y p dados"
+        print("No existe un r para el a y p dados")
+        # Con devolver -1 nos basta, ya que en todos los demas
+        # casos se devuelve un entero módulo p y me es util para
+        # el apartado siguiente
+        return -1
     
-    # Si existe un r lo buscamos
+    # Si existe un r lo buscamos según el algoritmo
+    # planteado por "Lecture Notes on Cryptography"
+      
+    # En primer lugar si p es congruente con 3 módulo 4, 
+    # devolvemos que a elevado a m+1 módulo p es la raiz, 
+    # siendo m el número por el que tenemos que multiplicar
+    # 4 para que sea igual que p-3
+    if modPotencia(p-3,1,4)==0:
+        m=(p-3)//4
+        return modPotencia(a,m+1,p)
 
-    for m in np.arange(p-1)+1:
+
+    if modPotencia(p-1,1,4)==0:
+        m=(p-1)//4
         
-        if modPotencia(4*m+3,1,p)==0:
-            print("#### 1 ####")
-            print(a,m+1,p," #### ",modPotencia(-1,(p-1)/2,p))
-            return modPotencia(a,m+1,p)
-    
-        if modPotencia(4*m+1,1,p)==0:
-            
-            # Buscamos un valor aleatorio de b que
-            # satisfaga que su simbolo de Jacobi sobre
-            # p sea -1
+        # Buscamos un valor aleatorio de b que
+        # satisfaga que su simbolo de Jacobi sobre
+        # p sea -1, es decir que no sea un residuo
+        # cuadrático
+        b=random.randint(0,p-1)
+        while simboloJacobiLegendre(b,p)!=-1:
             b=random.randint(0,p-1)
-            while simboloJacobiLegendre(b,p)==-1:
-                b=random.randint(0,p-1)
 
-            i=modPotencia(2*m,1,p)
-            j=0
+        # Cuando hemos encontrado un b
+        i=modPotencia(2*m,1,p)
+        j=0
 
-            while modPotencia(i,1,2)!=0:
-                i=i/2
-                j=j/2
-                if modPotencia(modPotencia(a,i,p)*modPotencia(b,j,p),1,p)==-1:
-                    j=modPotencia(j+2*m,1,p)
-            
-            print("#### 2 ####")
-            return modPotencia(modPotencia(a,(i+1)/2,p)*modPotencia(b,j/2,p),1,p)
-   
+        # Repetimos el siguiente bucle mientras que 
+        # i sea par
+        while modPotencia(i,1,2)!=1:
+            i=i//2
+            j=j//2
 
-    """ for m in np.arange(p):
+            a_i=modPotencia(a,i,p)
+            b_i=modPotencia(b,j,p)
+            if modPotencia(a_i*b_i,1,p)==p-1:
+                j=modPotencia(j+2*m,1,p)
         
-        if modPotencia(4*m+3,1,p)==0:
-            print("#### 1 ####")
-            return int(modPotencia(a,m+1,p))
-    for m in np.arange(p):
-        if modPotencia(8*m+5,1,p)==0 and modPotencia(modPotencia(a,2*m+1,p)-1,1,p)==0:
-            print("#### 2 ####")
-            return int(modPotencia(a,m+1,p))
-    for m in np.arange(p):
-        if modPotencia(8*m+5,1,p)==0 and modPotencia(modPotencia(a,2*m+1,p)+1,1,p)==0:
-            print("#### 3 ####")
-            return int(modPotencia(0.5*modPotencia(4*a,m+1,p)*(p+1),1,p))
-     """
+        # Cuando i pase a ser impar devolvemos que 
+        # a elevado a i+1 entre 2 por b elevado a j
+        # entre 2 es una raiz de a módulo p
+        return modPotencia(modPotencia(a,(i+1)/2,p)*modPotencia(b,j/2,p),1,p)
 
+# Función alternativa a la planteada arriba sacada de 
+# "Handbook of Applied Cryptography" para sacar las
+# 2 raices de un a módulo p
 
-
-    """     u,s=descomposicionUyS(p-1)
-    r=modPotencia(a,(s+1)/2,p)
-
-    a_s=modPotencia(modPotencia(r,2,p)*modPotencia(a,p-1,p),1,p)
-
-    m=random.randint(0,p-1)
-    while simboloJacobiLegendre(m,p)!=-1:
-        m=random.randint(0,p-1)
+def raicesEnP(a, p):
+    if not esPrimo(p,10):
+        return "Error, "+str(p)+" no es primo "
     
-    mu=modPotencia(m,s,p) """
+    if modPotencia(p-3,1,4)==0:
+        r=modPotencia(a,(p+1)/4,p)
+        return [r,-r]
+    
+    if modPotencia(p-5,1,8)==0:
+        d=modPotencia(a,(p-1)/4,p)
+
+        if d==1:
+            r=modPotencia(a,(p+3)/8,p)
+            return [r,-r]
+        if d==p-1:
+            r=modPotencia(modPotencia(2*a,1,p)*modPotencia(4*a,(p-5)/8,p),1,p)
+            return [r,-r]
+
+# Segundo apartado del ejercicio, a partir de un "a" que es residuo
+# cuadrático para un p y un q primos, uso el teorema chino de los 
+# restos para calcular todas las raíces cuadradas de a modulo n siendo 
+# n=pq a partir de las de p y q
+
+# Uso el algoritmo 3.44 de "Handbook of applied Cryptography"
+
+def raicesNCompuesto(a,p,q):
+    n=p*q
+    # Calculo las raices de "a" módulo p y q por separado
+    rp,sq=squaringTrapdoorRabin(a,p),squaringTrapdoorRabin(a,q)
+    rp2,sq2=modPotencia(-rp,1,p),modPotencia(-sq,1,q)
+
+    if rp==-1 or sq==-1:
+        return "Error, "+str(a)+" no es residuo cuadratico para "+str(p)+" o "+str(q)
+
+    # Usamos el algoritmo extendido de euclides para encontrar c y d
+    # tales que c*p+d*q=1 es decir los coeficientes de bezout de p y q
+    m=mcd(p,q)
+    c,d=m[1:]
+
+    # Ahora con los coeficientes de Bezout calculamos las raices 
+    # de n a partir de las de p y q usando el teorema chino de 
+    # los restos
+    x=modPotencia(rp*d*q+sq*c*p,1,n)
+    y=modPotencia(rp*d*q+sq2*c*p,1,n)
+    x2,y2=modPotencia(-x,1,n),modPotencia(-y,1,n)
+
+    return [x,x2,y,y2]
+    
     
 ######### Ejercicio 7 #########
 
@@ -391,10 +454,79 @@ def factorizacionFermat(n):
     # le asignamos a y el valor de la raiz cuadrada de x^2-n
     y=round(newtonRaphson((pow(x,2)-n),0.00001))
 
+    # Devolvemos los factores encontrados
     return [x+y,x-y]
     
-
+# Factorización de un número por el método de 
+# Pollard, devolvemos un factor d no trivial de n
 def factorizacionPollard(n):
+    # Comprobamos que sea primo, en cuyo caso devolvemos 
+    # el propio n
+    if esPrimo(n,10):
+        return n
+    
+    a,b,d=2,2,1
+    # Mientras d valga 1
+    while d==1:
+        # Le aplicamos a "a" la funcion g(x)=(x^2+1) mod n 1 vez
+        # y a b dos veces 
+        a=modPotencia(pow(a,2)+1,1,n)
+        b=modPotencia(pow(modPotencia(pow(b,2)+1,1,n),2)+1,1,n)
+
+        # Calculamos el MCD para a-b y n y se
+        # lo asignamos a d
+        d=mcd(a-b,n)[0]
+    
+    if 1<d<n:
+        return d
+    if d==n:
+        return "Fracaso al encontrar un factor no trivial"
+    
+######### Ejercicio 8 #########
+
+# Benchmark de tiempos acordada entre
+# compañeros de la asignatura
+def tiempos():
+    tiempos = collections.defaultdict(int)
+    EJECUCIONES = 1000
+    
+    for _ in range(EJECUCIONES):
+        t = time.time()
+        mcd(primos[0], primos[1])
+        tiempos['gcd'] += time.time() - t
+        
+        t = time.time()
+        modInverso(primos[0], primos[1])
+        tiempos['modinv'] += time.time() - t
+        
+        t = time.time()
+        modPotencia(primos[0], primos[0], primos[1])
+        tiempos['modpow'] += time.time() - t
+        
+        t = time.time()
+        esPrimo(primos[0],10)
+        tiempos['Miller-Rabin'] += time.time() - t
+        
+        aux = modPotencia(51, 79, primos[0])
+        t = time.time()
+        pasoEnanoGigante(51, aux, primos[0])
+        tiempos['enano-gigante'] += time.time() - t
+        
+        aux = modPotencia(primos[0], 2, primos[1])
+        t = time.time()
+        squaringTrapdoorRabin(aux, primos[1])
+        tiempos['Tonelli-Shanks'] += time.time() - t
+        
+        n = primos[0] * primos[1]
+
+ 
+    for i in tiempos: tiempos[i] /= EJECUCIONES
+ 
+    # Fermat va mucho más lento, así que lo hago con menos ejecuciones
+
+ 
+    for i in tiempos:
+        print(i+':', tiempos[i])
 
 
 ###########################################################
@@ -410,19 +542,6 @@ def main():
         print("Elija un ejercicio (1-8)")
         tecla=input()
         #clear() # Limpiamos la terminal
-
-        #################################################################################
-        # PARAMETROS PARA LOS EJERCICIOS
-        #################################################################################
-
-        a,b=28,13
-        c,d=252336560693540533935881068298825202079,38942750026936412998460304986028600003
-        e,f,g=13,2,19
-        # Lista de primos de gran tamaño para hacer 
-        # pruebas
-        primos=[46381, 768479, 9476407, 36780481, 562390847, 1894083629,
-        65398261921, 364879542899, 8590365927553, 28564333765949, 123456789101119,
-        623084000430982607975364879776457600049]
 
         #################################################################################
 
@@ -448,22 +567,38 @@ def main():
                 pasoEnanoGigante(e,f,g))
 
         if tecla=='6':
-            a_s=[1,3,4,5,9,12,14,15,16,20,23]
-            a_s=[4,6,7,9,10,11,13]
-            p=53
-            for a in a_s:
-                r=squaringTrapdoorRabin(a,p)
-                print(modPotencia(modPotencia(r,2,p)-a,1,p)," - ",modPotencia(r,2,p))
-        
+            # Primer apartado
+            a,p=6,53
+            r=squaringTrapdoorRabin(a,p)
+            print("Para",a,"y",p,"tenemos que",
+                r,"es una raiz de",
+                a,"módulo",p,"ya que",r,"^2 congruente con",a,"módulo",p,"es",
+                modPotencia(modPotencia(r,2,p)-a,1,p))
+
+            # Segundo apartado
+            a,p,q=4,7,11
+            n=p*q
+            raices=raicesNCompuesto(a,q,p)
+            print("Las raices de",n,"siendo n",p,"por",q,"son",raices)
+
+            # Comprobacion de que para las 4 raices si se elevan al cuadrado
+            # y se les resta a módulo n el resultado es 0
+            print(modPotencia(modPotencia(raices[0],2,n)-a,1,n),
+                modPotencia(modPotencia(raices[1],2,n)-a,1,n),
+                modPotencia(modPotencia(raices[2],2,n)-a,1,n),
+                modPotencia(modPotencia(raices[3],2,n)-a,1,n))
+
         if tecla=='7':
             n=6352351
             fact=factorizacionFermat(n)
             print("La factorización del número",n,"por Fermat es",fact[0],"y",fact[1])
 
-            n2=7011461
+            n2=455459
             fact2=factorizacionPollard(n2)
-            print("La factorización del número",n,"por Pollard es",fact2[0],"y",fact2[1])
+            print("Un factor no trivial obtenido de la factorización por Pollard de",n,"es",fact2)
 
+        if tecla=='8':
+            tiempos()
 
         #################################################################################
 
