@@ -9,6 +9,8 @@
 import numpy as np
 import random
 
+from sympy import sec
+
 ######### Ejercicio 1 #########
 """
 
@@ -70,7 +72,6 @@ def postuladosGolomb(secuencia):
     # es True
     elemento = secuencia[lista[:-1]]
 
-
     # Contamos rachas 
 
     # Array en el para la columna i tenemos las rachas de 
@@ -83,58 +84,48 @@ def postuladosGolomb(secuencia):
 
     # Ahora comprobamos que se cumple el segundo postulado
     # a partir de lo calculado
-
+    
+    suma=rachas[:][0]+rachas[:][1]
+    
     # No puede haber más de 2 tamaños de rachas con solo
     # 1 racha, en cuyo caso no se cumple el postulado
+    if np.size(suma[np.where(suma==1)])>2:
+        return False
 
-    test=np.array([[4,2,1,1,1],
-    [4,2,1],
-    [4,2,1,1],
-    [4,2],
-    [4],
-    [1],
-    [5,3],
-    [1,1],
-    [2,1,1],
-    [2,1,2],
-        ])
-    
-    for suma in test:
-        suma=np.array(suma)
-        print(suma)
-        
-        if np.size(suma[np.where(suma==1)])>2:
-            print( "1False")
+    # No puede haber mas rachas de tamaño n que de n-1, 
+    # La suma de los elementos de la diferencia del vector suma
+    # que son mayores que 0 debe ser 0
+    if np.sum(np.diff(suma)>0)!=0:
+        return False
 
-        # No puede haber mas rachas de tamaño n que de n-1, 
-        # La suma de los elementos de la diferencia del vector suma
-        # que son mayores que 0 debe ser 0
-        if np.sum(np.diff(suma)>0)!=0:
-            print( "2False")
-
-        for i in np.arange(np.size(suma)):
-            if i==0:
-                if suma[i]!=1 and rachas[0][0]!=rachas[1][0]:
-                    print( "3False")
-            else:
-                if suma[i]!=1 and ( rachas[0][0]!=rachas[1][0] or suma[i]!=suma[i-1]/2):
-                    print( "4False")
-                print(suma[i-1]/2)
-                if suma[i]==1 and suma[i]!=suma[i-1]/2 and i!=np.size(suma)-1:
-                    print( "5False")
-
-        print("###########\n\n")
-        
-    
-
-
+    # Compruebo que haya el mismo número de cadenas longitud n
+    # para 0s y 1s (cuando no hay 1 sola cadena), que se cumpla
+    # la mitad de cadenas etc
+    for i in np.arange(np.size(suma)):
+        if i==0:
+            if suma[i]!=1 and rachas[0][0]!=rachas[1][0]:
+                return False
+        else:
+            if suma[i]!=1 and ( rachas[0][0]!=rachas[1][0] or suma[i]!=suma[i-1]/2):
+                return False
+            if suma[i]==1 and suma[i]!=suma[i-1]/2 and i!=np.size(suma)-1:
+                return False
 
     ##############################################
 
+    # Tercer postulado: Se cumple si para todos los desplazamientos
+    # de la secuencia el número de elementos con respecto a la secuencia
+    # original se mantiene constante
 
+    secuenciaDesp=np.roll(secuencia,1)
+    desp=np.sum(secuenciaDesp!=secuencia)
+    while(not np.array_equal(np.roll(secuenciaDesp,1), secuencia)):
+        secuenciaDesp=np.roll(secuenciaDesp,1)
+        if desp!=np.sum(secuenciaDesp!=secuencia):
+            return False
+        desp=np.sum(secuenciaDesp!=secuencia)
 
-
-
+    # Si se cumplen los 3 postulados devolvemos true
     return True
 
 
@@ -167,6 +158,15 @@ def main():
             # Tomo como secuencia binaria la usada como
             # ejemplo en la referencia del ejercicio
             secuencia=np.array([0,0,0,1,0,0,1,1,0,1,0,1,1,1,1])
+
+            secuencias=np.array([
+                [0,0,0,0,1,0,0,1,0,1,1,0,0,1,1,1,1,1,0,0,0,1,1,0,1,1,1,0,1,0,1],
+                [0,0,1,0,0,0,1,1,1,0,1],
+                [0,0,0,0,0,1,0,0,0,1,1,0,1],
+                [0,1,0,0,1,1,0,1]
+            ])
+            for sec in secuencias:
+                print(postuladosGolomb(np.array(sec)))
 
             res=postuladosGolomb(secuencia)
             sol=""
