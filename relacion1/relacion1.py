@@ -6,6 +6,7 @@
 
 """
 
+from operator import mod
 import numpy as np
 import os
 import random
@@ -640,6 +641,9 @@ def main():
 
         if tecla=='8':
             tiempos(primos)
+
+        if tecla=='9':
+            print(mcd(9,5))
 
 
         #################################################################################
