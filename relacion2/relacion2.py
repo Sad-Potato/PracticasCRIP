@@ -6,7 +6,7 @@
 
 """
 
-from cv2 import threshold
+from ast import Return
 import numpy as np
 import random
 
@@ -193,22 +193,18 @@ def lfsr(nSalida, coeficientes, semilla):
     La implementación es equivalente a la de LFSR pero
     en este caso tenemos una función no lineal
 
-    ##### FORMATO DE LA ENTRADA #####
-
 """
 
-def nlfsr(funcionP, semilla, k):
-    
-    print("TEST")
+def nlfsr(semilla, k):
 
     lenght=len(semilla)
     actual=int(semilla,2)
-    coeficientes=int(coeficientes,2)
     salida=np.empty(k)
 
     for i in np.arange(k):
         salida[i]=int(actual%2!=0)
-        calculo=coeficientes & actual
+        x, y, z, t=actual & (1<<3), actual & (1<<2), actual & (1<<1), actual & 1 
+        calculo=((x & y) | (1 ^ z)) ^ t
         actual=actual>>1
         
         # Función no lineal
@@ -220,25 +216,17 @@ def nlfsr(funcionP, semilla, k):
 
 """
     Generador de Geffe
-
-    ##### FORMATO DE LA ENTRADA #####
-
 """
 
 def geffe(lfsr1, lfsr2, lfsr3, salida):
 
     # Transformo las salidas de los lfsr para poder operar
     # con ellas con la operaciones de bits inherentes al 
-    # tipo int
-    # print(np.array2string(c3.astype(np.int64), max_line_width=10000).translate({32: None, 91: None, 93: None, 44: None}))
+    # tipo int, paso de un array de numpy a un entero
 
-    x1=int(np.array2string(lfsr1.astype(np.int64), max_line_width=500000, threshold=500000)
-        .translate({32: None, 91: None, 93: None, 44: None}),2)
-    x1ex=int("".join(map(str, lfsr1.astype(int))),2)
-    x2=int(np.array2string(lfsr2.astype(np.int64), max_line_width=500000, threshold=500000)
-        .translate({32: None, 91: None, 93: None, 44: None}),2)
-    x3=int(np.array2string(lfsr3.astype(np.int64), max_line_width=500000, threshold=500000)
-        .translate({32: None, 91: None, 93: None, 44: None}),2)
+    x1=int("".join(map(str, lfsr1.astype(int)))[::-1],2)
+    x2=int("".join(map(str, lfsr2.astype(int)))[::-1],2)
+    x3=int("".join(map(str, lfsr3.astype(int)))[::-1],2)
 
     # Combinamos las salidas de los LFSR's mediante
     # la función no lineal de la definicion y las funciones de
@@ -250,29 +238,61 @@ def geffe(lfsr1, lfsr2, lfsr3, salida):
     
     resultado=""
     for i in np.arange(salida):
-        lbit="0"
-        if i%50000==0:
-            print(i)
 
+        # Me quedo con el bit menos significativo
         x1i, x2i, x3i= x1 & 1, x2 & 1, x3 & 1
         
-        # Toma el elemento más a la derecha y opero
-        x1, x2, x3=x1>>1, x2>1, x3>>1
-        nextValor=x1i & x2i ^ x2i & x3i ^ x3i
-
-        if nextValor:
-            lbit="1"
+        # Desplazo a la derecha
+        x1, x2, x3=x1>>1, x2>>1, x3>>1
         
-        resultado=resultado+lbit
+        # Opero con el bit guardado
+        nextValor=(x1i & x2i) ^ ((1 ^ x2i) & x3i)
+        
+        # Añado el resultado
+        resultado=resultado+str(nextValor)
 
-    # print("2", len(resultado), resultado[-20:-2])
+    # Devuelvo el string con la cadena
+    return resultado
 
 
+######### Ejercicio 5 #########
 
+"""
+    Algoritmo Berlekamp-Massey
+"""
+
+def berlekampMassey(cadena):
+    # Tamaño de la cadena
+    n=np.size(cadena)
+
+    # Inicialización
+    polinomio, b, T = 1, 1, -1
+    L, m, N, d = 0, -1, 0, -1
+
+    while N<n:
+
+        # Siguiente discrepancia
+        cadenaInt=int("".join(map(str, cadena[-L:].astype(int))),2)
+        d=sumaBitsEntero(cadena[N]+sumaBitsEntero(cadenaInt & polinomio))
+
+        # Si la discrepancia es 1 hacemos lo siguiente
+        if d==1:
+            T=polinomio
+            polinomio=polinomio + (b * (1<<(N-m)))
+
+            if L<=N//2:
+                L=N+1-L
+                m=N
+                b=T
+        N+=1
+    
+    return L
 
 ###########################################################
 # Main para elegir el ejercicio que queremos mostrar
 ###########################################################
+
+# Como comentario ejercicios 3 y 5 hechos con un poco de prisa
 
 def main():
     tecla=""
@@ -302,6 +322,9 @@ def main():
 
     cadP1=lfsr(15, "1001", "0110")
     cadP2=lfsr(7, "101", "010")
+
+    # Ejercicio 5
+    cadena=np.array([0, 0, 1, 1, 0, 1, 1, 1, 0])
 
     #################################################################################
     # Bucle para la eleccion del ejercicio
@@ -377,49 +400,84 @@ def main():
                 print("Alguna de las 2 cadenas o ambas no cumplen los postulados")
 
         if tecla=='3':
-            # Función polinomica
-            f=np.array([[]])
 
             # Semilla
             semilla="1011"
 
-            nlfsr()
+            # Por falta de tiempo la función polinónmica la integro
+            # directamente en la función
+            resultado=nlfsr(semilla, 500)
+
+            resultado="".join(map(str, resultado.astype(int)))
+            n=len(resultado)
+            periods = [i for i in range(2,n//2+1) if resultado[:i]*(n//i)==resultado[:n - n % i]]
+
+            if np.size(periods)==0:
+                print("El periodo para la función planteada es", n)
+            else:
+                print("El periodo para la función planteada es", periods[0])
 
         if tecla=='4':
 
-            a="10000000"
-            n=len(a)
-            # print(a, n)
-            periods = [i for i in range(2,n//2+1) if a[:i]*(n//i)==a[:n - n % i]]
-            if np.size(periods)==0:
-                print("Tiene periodo", n, "es decir del tamaño del vector")
-            else:
-                print("Tiene periodo minimo de", periods[0])
-
             # Generador de Geffe
+            print("""El generador de Geffe con 3 lfsr, con L's 2, 3 y 5, y sus correspondientes polinomios primitivos obtiene:""")
 
             # Tomamos 3 valores de L que sean primos relativos entre
-            # ellos, tomo como valores 4, 5, 9 y estos serán los grados
+            # ellos, tomo como valores 3, 4, 5 y estos serán los grados
             # de los polinomios primitivos de los 3 LFSR, los listo
             # a continuación (no se representa el termino independiente)
             # además de las semillas de tamaño L y aleatorias
-            p1, p2, p3="1001", "10010", "100000001"
-            s1, s2, s3="1101", "10101", "010111001"
+            p1, p2, p3= "11","101", "10010"
+
+            # Semillas distintas
+            s1, s2, s3= "10","100", "01100"
 
             # Guardamos el L para cada LFSR
             l1, l2, l3=len(p1), len(p2), len(p3)
 
-            # Periodo máximo
+            # Periodo máximo al hacerlo con valores de L
+            # que son primos relativos
             periodo=((2**l1)-1)*((2**l2)-1)*((2**l3)-1)
 
             # Calculamos los 3 LFSR de periodo máximo
-            lfsr1=lfsr(periodo,p1, s1)
-            lfsr2=lfsr(periodo,p2, s2)
-            lfsr3=lfsr(periodo,p3, s3)
-            print("test")
+            lfsr1=lfsr(periodo, p1, s1)
+            lfsr2=lfsr(periodo, p2, s2)
+            lfsr3=lfsr(periodo, p3, s3)
 
-            # print("1", periodo)
-            geffe(lfsr1, lfsr2, lfsr3, periodo)
+            # Calculamos "periodo" elementos con geffe, y debemos obtener 
+            # que el periodo es igual al número de la variable "periodo"
+            cadenaGeffe=geffe(lfsr1, lfsr2, lfsr3, periodo)
+
+            # Calculo del periodo
+            # https://stackoverflow.com/questions/63181869/how-do-i-measure-the-periodicity-or-frequency-of-a-list-of-values
+            
+            n=len(cadenaGeffe)
+            periods = [i for i in range(2,n//2+1) if cadenaGeffe[:i]*(n//i)==cadenaGeffe[:n - n % i]]
+
+            if np.size(periods)==0:
+                print("Tiene periodo", n, "es decir del tamaño del vector y por tanto periodo máximo")
+            else:
+                print("Tiene periodo minimo de", periods[0])
+
+            # Cifro un m arbitrario(un número, un mensaje etc)
+            m=32
+
+            # Construyo una llave del mismo tamaño que m
+            k=geffe(lfsr1, lfsr2, lfsr3, len(bin(m)[2:]))
+
+            # Cifro m
+            mCifrada=int(k,2) ^ m
+
+            print("Cifro el valor",m,"obteniendo",mCifrada)
+
+            # Descifro m
+            mDescifrada=int(k,2) ^ mCifrada
+            print("Y descifro",mCifrada,"obteniendo",mDescifrada)
+
+        if tecla=='5':
+            # Le paso una cadena previamente calculada
+            L=berlekampMassey(cadena)
+            print("La complejidad lineal para el ejemplo 6.33 es",L)
 
         #################################################################################
 
