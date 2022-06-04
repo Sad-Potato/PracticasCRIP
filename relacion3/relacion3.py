@@ -277,33 +277,63 @@ def mochilaDecipher(mensajeCifrado, cadenaA, u, n):
 
 ######### Ejercicio 3 #########
 
-def tmp(n):
+""" Desarrollo en el main """
 
-    x=random.randint(2,n-1)
-    r1, r2=12, 37659670402359614687722
+######### Ejercicio 4 #########
 
-    test=relacion1.squaringTrapdoorRabin(144,n)
-    print("TEST", test)
-    test2=modPotencia(test, 2, n)-144
-    print(test2, test2<n)
-    print(modPotencia(a,2,n))
+# Mismo valor para n que en el
+# ejercicio 3
+n=48478872564493742276963
 
-    y=relacion1.squaringTrapdoorRabin(modPotencia(x, 2, n),n)
+# Funcion h de compresión definida
+# por Goldwasser, Micali y Rivest, 
+# con a0 y a1 cuadrados arbitrarios
+def funcionCompresion(b, x):
+    a0, a1 = 144, 169
 
-    while modPotencia(x-y,1,n)==0 or modPotencia(x+y,1,n)==0:
-        x=random.randint(2,n-1)
-        y=relacion1.squaringTrapdoorRabin(modPotencia(x, 2, n),n)
+    return modPotencia(
+                modPotencia(x, 2, n)*
+                modPotencia(a0, b ,n)*
+                modPotencia(a1, 1-b, n),
+                1, n)
+    
+# Uso la construccion de Merkle-Damgàrd para 
+# implementar una función hash sin colisiones.
+# - f es una función de compresión resistente a colisiones,
+# en nuestro caso la dada por el enunciado
+# - v es el vector inicial con los mismos bits
+# que n
+# - M es el mensaje 
+def hashMerkleDamgard(f, v, M):
+    # A partir de la función f creo una 
+    # función h hash 
+    
+    # Valor de n, numéro de bits de la salida
+    bits=len(bin(n)[2:])
+    # print(bits)
 
-    print(modPotencia(modPotencia(y,2,n)-x,1,n))
-    print(x, y)
-    print(relacion1.mcd(modPotencia(x-y,1,n), n))
+    # Tomo como valor de b 128 bits para el tamaño 
+    # del bloque
+    b=128
+
+    while(M):
+        bloque=M & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+        # print(bin(bloque))
+        M=M >> b
+
+        v=funcionCompresion(bloque, v)
+        # print(bloque, len(bin(bloque)[2:]))
+
+    return v
+
+"""     x=int("0000000100000001",2)
+    c = (x >> 8) & 0xff
+    f = x & 0xff
+    print(c, f, "0xf") """
+
+    # Voy tomando bloques de 
     
     
-    
-    
-
-    
-
 
 ###########################################################
 # Main para elegir el ejercicio que queremos mostrar
@@ -403,9 +433,54 @@ def main():
             print("El inverso de",fechaNacimiento,"es",modInverso(fechaNacimiento, p))
 
         if tecla=='3':
+            # A partir del n dado y del lemma 2.43 encontrar 2 
+            # divisores no triviales de n se resume en lo siguiente
             n=48478872564493742276963
+
+            # A partir de la información dada se 
+            # deduce facilmente lo siguiente, es decir que el valor
+            # de x es 12 mientras que el "y" calculado en el lemma a partir del 
+            # 144 que resulta de hacer el cuadrado de 12 modulo n y n es 
+            # 37659670402359614687722
+            x, y=12, 37659670402359614687722
+
+            # Y aplicando lo que se demuestra 
+            # el lemma 2.43 encontramos unos valores para 
+            # p y q
+
+            if not modPotencia(x-y,1,n)==0 and not modPotencia(x+y,1,n)==0:
+                div1=mcd(x-y, n)[0]
+                print("Un divisor no trivial de",n ,"es", div1)
+
+            # Calculo el otro divisor de n a partir
+            # calculado
+            div2=n//div1
+            print("siendo el otro divisor", div2)
+
+            # Compruebo con rabin la primalidad de ambos
+            if not esPrimo(div1, 10) or not esPrimo(div2, 10):
+                print("Error, uno o ambos divisores no es primo")
         
-            tmp(n)
+        if tecla=='4':
+            # Mismo n que en el apartado anterior
+            n=48478872564493742276963
+            # print(len(bin(n)[2:]))
+
+            # Tomo un valor inicial arbitrario y con 
+            # como mucho los mismos bits que n
+            x=n-1000000000
+            # print(len(bin(x)[2:]))
+
+            # Mensaje
+            M=2342974023840238424820420834024082204272932793972
+            print(len(bin(M)[2:])) # 1 bloque de 128 y otro de 33
+
+            Ht=hashMerkleDamgard(funcionCompresion, x, M)
+
+            print("El valor hash para M es", Ht)
+            
+
+
 
 
 if __name__ == "__main__":
