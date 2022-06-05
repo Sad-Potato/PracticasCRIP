@@ -321,7 +321,6 @@ def squaringTrapdoorRabin(a, p):
         # el apartado siguiente
         return -1
 
-    print("TEST0", simboloJacobiLegendre(a,p))
     
     # Si existe un r lo buscamos según el algoritmo
     # planteado por "Lecture Notes on Cryptography"
@@ -332,7 +331,6 @@ def squaringTrapdoorRabin(a, p):
     # 4 para que sea igual que p-3
     if modPotencia(p-3,1,4)==0:
         m=(p-3)//4
-        print("TEST1")
         return modPotencia(a,m+1,p)
 
 
@@ -365,7 +363,6 @@ def squaringTrapdoorRabin(a, p):
         # Cuando i pase a ser impar devolvemos que 
         # a elevado a i+1 entre 2 por b elevado a j
         # entre 2 es una raiz de a módulo p
-        print("TEST2")
         return modPotencia(modPotencia(a,(i+1)/2,p)*modPotencia(b,j/2,p),1,p)
 
 # Función alternativa a la planteada arriba sacada de 
