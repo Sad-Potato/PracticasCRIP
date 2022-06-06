@@ -22,7 +22,7 @@ import relacion1 as rel1 # Funciones de la primera relación
 """
 
 def llavPublica(secuencia, n, u):
-    return [modPotencia(u*secuencia[i],1,n) for i in np.arange(np.size(secuencia))]
+    return [rel1.modPotencia(u*secuencia[i],1,n) for i in np.arange(np.size(secuencia))]
 
 
 
@@ -47,12 +47,12 @@ def mochilaCipher(mensaje, llavePublica):
 def mochilaDecipher(mensajeCifrado, cadenaA, u, n):
     # Obtengo el inverso de u módulo n, para deshacer
     # la multiplicacion de u con la cadena supercreciente
-    uInv=modInverso(u, n)
+    uInv=rel1.modInverso(u, n)
 
     # Ahora obtengo el b de la mochila, al multiplicar por
     # el inverso de u obtenemos de forma efectiva la cadena 
     # super-creciente ya que el mensaje es una cadena binaria 
-    b=modPotencia(mensajeCifrado*uInv, 1, n)
+    b=rel1.modPotencia(mensajeCifrado*uInv, 1, n)
 
     mensajeDescifrado=np.zeros((np.size(cadenaA)), dtype=int)
 
@@ -86,10 +86,10 @@ n=48478872564493742276963
 def funcionCompresion(b, x):
     a0, a1 = 144, 169
 
-    return modPotencia(
-                modPotencia(x, 2, n)*
-                modPotencia(a0, b ,n)*
-                modPotencia(a1, 1-b, n),
+    return rel1.modPotencia(
+                rel1.modPotencia(x, 2, n)*
+                rel1.modPotencia(a0, b ,n)*
+                rel1.modPotencia(a1, 1-b, n),
                 1, n)
     
 # Uso la construccion de Merkle-Damgàrd para 
@@ -116,7 +116,7 @@ def hashMerkleDamgard(f, v, M):
 ######### Ejercicio 5 #########
 
 def funcionRSA(n, e, x):
-    return modPotencia(x, e, n)
+    return rel1.modPotencia(x, e, n)
 
 ######### Ejercicio 6 #########
 
@@ -130,38 +130,43 @@ def primeFactors(N, d, e):
     
     # Descomponemos en potencias de 
     # 2 el resultado de d * e - 1
-    a, b=rel1.descomposicionUyS(d*e-1)
+    a, b=rel1.descomposicionUyS((d*e)-1)
 
     # Escogemos un valor de x para el cual
     # se cumpla que mcd(N, x)=1
-    x=random.randint(1,n-1)
-    while rel1.mcd(x, N)[0]!=1:
-        x=random.randint(1,n-1)
+    x1=random.randint(1,N-1)
+    gcdx1=rel1.mcd(x1, N)[0]
+
+    # Si el mcd no es 1 ya hemos encontrado un factor
+    if gcdx1!=1:
+        return gcdx1
 
     # Calculamos valor de y a partir de 
     # x y b 
-    y=rel1.modPotencia(x, b, N)
+    y1=rel1.modPotencia(x1, b, N)
+
+    #print(y1,"-",x1,b,N,d,e)
 
     # Si se cumple esto en una primera
     # instancia el algoritmo falla
-    if rel1.modPotencia(y+1, 1, N)==0 or\
-        rel1.modPotencia(y-1, 1, N)==0:
-        return None 
+    if rel1.modPotencia(y1+1, 1, N)==0 or\
+        rel1.modPotencia(y1-1, 1, N)==0:
+        return None  
 
 
     # Buscamos "y" tal que se cumpla lo anterior
-    z=y
-    y=rel1.modPotencia(y, 2, N)
-    while not rel1.modPotencia(y-1, 1, N)==0 and\
-        not rel1.modPotencia(y+1, 1, N)==0:
-        z=y
-        y=rel1.modPotencia(y, 2, N)
+    z=y1
+    y1=rel1.modPotencia(y1, 2, N)
+    while not rel1.modPotencia(y1-1, 1, N)==0 and\
+        not rel1.modPotencia(y1+1, 1, N)==0:
+        z=y1
+        y1=rel1.modPotencia(y1, 2, N)
 
     # Si se ha cumplido que y es congruente con -1
     # entonces el algoritmo falla, mientras que si 
     # lo ha sido con 1 podemos calcular los factores primos 
     # de N
-    if rel1.modPotencia(y+1, 1, N)==0:
+    if rel1.modPotencia(y1+1, 1, N)==0:
         return None
     
     # Hemos encontrado un z con el que calcular
@@ -190,7 +195,7 @@ def keygen():
     # Calculo un valor e para la llave pública 
     # menor que el valor de phi de n
     phi_n=(p-1)*(q-1)
-    e=2
+    e=random.randint(2,phi_n//2)
     while e<phi_n and rel1.mcd(e, phi_n)[0]!=1:
         e+=1
     
@@ -200,25 +205,64 @@ def keygen():
     
     # Calculo un valor de d, siendo d 
     # el inverso de e módulo phi(n)
-    d=rel1.mcd(e, phi_n)[1]
+    d=rel1.modPotencia(rel1.mcd(e, phi_n)[1], 1, phi_n)
 
     # Devuelvo la llave pública y privada
     return [n, e], [n, d]
 
 def firmagen(mensaje, clavePrivada):
     # Leo el mensaje y la clave privada
+    mensajeHandler=open(mensaje, "r")
+    claveHandler=open(clavePrivada, "r")
 
+    M=mensajeHandler.read()
+    privKey=list(claveHandler.read().split(" "))
+    privKey=[int(i) for i in privKey]
 
-    hash_object = hashlib.sha1(b)
-    print(hash_object.digest())
+    mensajeHandler.close()
+    claveHandler.close()
+
+    # Calculo el resumen del mensaje que se va a firmar
+    sha1 = hashlib.sha1(M.encode())
+    resumenHex=sha1.hexdigest()
+
+    # Cifro el resumen
+    resumenCipher=funcionRSA(privKey[0], privKey[1], int(resumenHex, 16))
+
+    # Devuelvo el resumen cifrado
+    return resumenCipher
+
+def verificacionFirma(mensaje, firma, clavePublica):
+    # Para verificar la firma, se decodifica la firma, y se
+    # compara con la firma que se obtiene al generar la del mensaje
+    mensajeHandler=open(mensaje, "r")
+    firmaHandler=open(firma, "r")
+    clavePublica=open(clavePublica, "r")
+
+    M=mensajeHandler.read()
+    pubKey=list(clavePublica.read().split(" "))
+    pubKey=[int(i) for i in pubKey]
+    firma=int(firmaHandler.read())
+
+    clavePublica.close()
+    mensajeHandler.close()
+    firmaHandler.close()
+
+    # Genero el valor hash con sha1 del mensaje
+    sha1 = hashlib.sha1(M.encode())
+    resumen=int(sha1.hexdigest(), 16)
+
+    # Decodifico la firma con la llave pública
+    firmaDecoded=funcionRSA(pubKey[0], pubKey[1], firma)
+
+    # Devuelvo si son iguales ambas claves
+    return resumen==firmaDecoded
+
 
 ###########################################################
 # Main para elegir el ejercicio que queremos mostrar
 ###########################################################
 
-# TODO Tamaño de bloque del ejercicio 4
-# TODO Arreglar formato ejercicio 2
-# TODO Funciones relación 1 
 # TODO Explicación ejercicio 6
 
 def main():
@@ -238,7 +282,6 @@ def main():
         n1=48478872564493742276963
         dni=54312680
         fechaNacimiento=20000501
-
 
         #################################################################################
 
@@ -261,7 +304,7 @@ def main():
 
             # Escojo un u tal que u y v sean coprimos
             u=5039
-            while mcd(u,n)[0]!=1:
+            while rel1.mcd(u,n)[0]!=1:
                 u+=1
             
             ##########################################
@@ -287,41 +330,24 @@ def main():
             # Primo p mayor o igual que el número de 
             # identidad y que (p-1)/2 tambien lo sea para 
             # facilitar el proceso
-            p=dni
-            while not esPrimo(p, 10) or not esPrimo((p-1)/2, 10):
-                p+=1
+            p=dni+1
+            while not rel1.esPrimo(p, 10) or not rel1.esPrimo((p-1)//2, 10):
+                p+=2
 
             # Encuentro el valor de la función phi de euler
             # para p y al ser p primo esto es p-1 (2.100)
             phi=p-1
             
-            # Usamos el algoritmo de paso enano-paso gigante
-            # para determinar si para un α cualquier el menor t
-            # tal que a^t≡1 mod n es igual al valor de phi de p
-            """ for i in np.arange(21):
-                print(i, ":",pasoEnanoGigante(i, 1, 21)) """
+            # Al tener que p-1/2 es primo basta con aplicar la 
+            # propiedad planteada en 2.132 ya que sabemos que los divisores
+            # primos de phi(p) son 2 y p-1/2
             
             alpha=np.random.randint(0,p)
-            while pasoEnanoGigante(alpha, 1, p)!=phi:
+            while rel1.modPotencia(alpha, phi//2, p)-1==0 or rel1.modPotencia(alpha, phi//((p-1)//2), p)-1==0:
                 alpha=np.random.randint(0,p)
+            print("Un elemento primitivo de p",p,"es alpha",alpha)
 
-            print(alpha)
-
-            """ i=3
-            primos=[2]
-            while i<phi//2:
-                if esPrimo(i, 10) and phi%i==0:
-                    primos.append(i)
-                i+=1
-
-            for x in primos:
-                if modPotencia(alpha, phi/x, p)-1!=0:
-                    print(x, phi, modPotencia(alpha, phi/x, p))
-                    print("No es elemento primitivo") """
-
-            
-
-            print("El inverso de",fechaNacimiento,"es",modInverso(fechaNacimiento, p))
+            print("El inverso de",fechaNacimiento,"es",rel1.modInverso(fechaNacimiento, p))
 
         if tecla=='3':
             # A partir del n dado y del lemma 2.43 encontrar 2 
@@ -338,8 +364,8 @@ def main():
             # el lemma 2.43 encontramos unos valores para 
             # p y q
 
-            if not modPotencia(x-y,1,n1)==0 and not modPotencia(x+y,1,n1)==0:
-                div1=mcd(x-y, n1)[0]
+            if not rel1.modPotencia(x-y,1,n1)==0 and not rel1.modPotencia(x+y,1,n1)==0:
+                div1=rel1.mcd(x-y, n1)[0]
                 print("Un divisor no trivial de",n1 ,"es", div1)
 
             # Calculo el otro divisor de n a partir
@@ -348,7 +374,7 @@ def main():
             print("siendo el otro divisor", div2)
 
             # Compruebo con rabin la primalidad de ambos
-            if not esPrimo(div1, 10) or not esPrimo(div2, 10):
+            if not rel1.esPrimo(div1, 10) or not rel1.esPrimo(div2, 10):
                 print("Error, uno o ambos divisores no es primo")
         
         if tecla=='4':
@@ -374,15 +400,15 @@ def main():
             # nacimiento
             p=dni
             q=fechaNacimiento
-            while not esPrimo(p, 10):
+            while not rel1.esPrimo(p, 10):
                 p+=1
-            while not esPrimo(q, 10):
+            while not rel1.esPrimo(q, 10):
                 q+=1
 
             # Selecciono "e" tal que se cumple que
             # gcd(e, (p−1)(q−1)) = 1
             e=12379
-            assert mcd(e, (p-1)*(q-1))[0]==1
+            assert rel1.mcd(e, (p-1)*(q-1))[0]==1
 
             # n como ya se ha mencionado si no se 
             # dice lo contrario es igual a p*q
@@ -408,17 +434,24 @@ def main():
             d=10000000074000000101
             
             # Calculamos p y q
-            p, q = primeFactors(n2, d, e)
+            res=primeFactors(n2, d, e)
+            while res==None:
+                res=primeFactors(n2, d, e)
+            p, q = res
             
             if p*q==n2:
                 print("Los valores de p y q para n son",p,"y",q)
 
-            # TODO
             # El procedimiento de este ejercicio y el 3 son similares en que
             # 
         
         if tecla=='7':
             # Implemento sistema de firma RSA
+
+            fichero="./mensaje.txt"
+            ficheroLlavePrivada="./privKey.txt"
+            ficheroLlavePublica="./pubKey.txt"
+            firma="./firmaFichero.txt"
 
             ##########################################
             # GENERACIÓN DE CLAVES
@@ -429,30 +462,37 @@ def main():
             pubKey, privKey=keygen()
 
             # Guardo la llave privada en un fichero 
-            f=open("./privKey.txt","w+")
-            f.write(str(privKey))
+            f=open(ficheroLlavePrivada,"w+")
+            f.write(str(privKey[0])+" "+str(privKey[1]))
+            f.close()
+
+            # Guardo la llave pública en un fichero 
+            f=open(ficheroLlavePublica,"w+")
+            f.write(str(pubKey[0])+" "+str(pubKey[1]))
             f.close()
 
             ##########################################
             # GENERACIÓN DE FIRMA
             ##########################################
 
-            fichero="./mensaje.txt"
-            ficheroLlavePrivada="./privKey.txt"
-
+            # Función para generar la firma a partir de
+            # un mensaje y una llave privada
             firmaFichero=firmagen(fichero, ficheroLlavePrivada)
 
-            f=open("./firmaFichero.txt","w+")
+            f=open(firma,"w+")
             f.write(str(firmaFichero))
             f.close()
-
-            # Hago uso de SHA1 para generar un resumen del mensaje
 
             ##########################################
             # VERIFICACIÓN DE FIRMA
             ##########################################
-            print()
+            
+            resultado=verificacionFirma(fichero, firma, ficheroLlavePublica)
 
+            if resultado:
+                print("Se verifica la firma para el mensaje")
+            else:
+                print("No se verifica la firma")
 
 if __name__ == "__main__":
     main()
